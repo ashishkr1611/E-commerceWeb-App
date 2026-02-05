@@ -1,6 +1,6 @@
 
 import React from "react";
-import { categories } from "@/lib/data";
+import { useProducts } from "@/context/ProductContext";
 import { cn } from "@/lib/utils";
 import { IndianRupee } from "lucide-react";
 
@@ -10,6 +10,7 @@ interface CategoryFilterProps {
 }
 
 export function CategoryFilter({ selectedCategory, onSelectCategory }: CategoryFilterProps) {
+  const { categories } = useProducts();
   return (
     <div className="mb-0">
       <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">

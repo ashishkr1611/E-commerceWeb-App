@@ -9,7 +9,7 @@ export function Hero() {
     <section className="relative">
       {/* Hero Background */}
       <div className="absolute inset-0 z-0 bg-gradient-to-r from-amber-500/40 to-amber-700/40" />
-      
+
       {/* Hero Image */}
       <div
         className="absolute inset-0 z-[-1] bg-cover bg-center"
@@ -17,7 +17,7 @@ export function Hero() {
           backgroundImage: "url(https://images.unsplash.com/photo-1495147466023-ac5c588e2e94?q=80&w=2070)",
         }}
       />
-      
+
       {/* Hero Content */}
       <div className="container relative z-10 py-20 md:py-32">
         <div className="max-w-xl">

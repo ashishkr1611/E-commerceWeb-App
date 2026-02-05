@@ -2,11 +2,12 @@ import React from "react";
 import { useCart } from "@/context/CartContext";
 import { useUser } from "@/context/UserContext";
 import { useNavigate, useLocation } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { 
+import {
   Form,
   FormControl,
   FormField,
@@ -17,8 +18,8 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { 
-  CreditCard, 
+import {
+  CreditCard,
   ShieldCheck,
   CheckCircle,
   Mail,
@@ -51,7 +52,7 @@ export function PaymentForm() {
   const navigate = useNavigate();
   const location = useLocation();
   const shippingDetails = location.state?.shippingDetails || null;
-  
+
   const cardForm = useForm<z.infer<typeof cardFormSchema>>({
     resolver: zodResolver(cardFormSchema),
     defaultValues: {
@@ -72,8 +73,8 @@ export function PaymentForm() {
   const codForm = useForm<z.infer<typeof codFormSchema>>({
     resolver: zodResolver(codFormSchema),
     defaultValues: {
-      name: user?.name || "",
-      phone: user?.phone || "",
+      name: `${shippingDetails?.firstName} ${shippingDetails?.lastName}` || user?.name || "",
+      phone: shippingDetails?.phone || user?.phone || "",
     },
   });
 
@@ -83,7 +84,7 @@ export function PaymentForm() {
       description: "Your payment has been successfully processed!",
       duration: 3000,
     });
-    
+
     handlePaymentSuccess();
   };
 
@@ -93,7 +94,7 @@ export function PaymentForm() {
       description: "Please check your UPI app to complete the payment",
       duration: 3000,
     });
-    
+
     handlePaymentSuccess();
   };
 
@@ -103,30 +104,92 @@ export function PaymentForm() {
       description: "Your Cash on Delivery order has been placed successfully!",
       duration: 3000,
     });
-    
+
     handlePaymentSuccess();
   };
 
-  const handlePaymentSuccess = () => {
-    if (user && user.email) {
-      console.log(`Sending purchase confirmation email to ${user.email}`);
-      
-      toast({
-        title: "Order Confirmation Sent",
-        description: (
-          <div className="flex items-center gap-2">
-            <Mail className="h-4 w-4" />
-            <span>An order confirmation has been sent to {user.email}</span>
-          </div>
-        ),
-        duration: 4000,
-      });
+  const handlePaymentSuccess = async () => {
+    if (user) {
+      try {
+        // Prepare items for RPC
+        const itemsForStock = cartItems.map(item => ({
+          id: item.product.id,
+          quantity: item.quantity
+        }));
+
+        // Call the RPC to check stock, deduct stock, and create order atomically
+        const { data: generatedOrderId, error } = await (supabase as any).rpc('handle_order_with_stock', {
+          p_user_id: user.id,
+          p_total_amount: totalPrice + (totalPrice * 0.05),
+          p_order_details: {
+            items: cartItems.map(item => ({
+              id: item.product.id,
+              name: item.product.name,
+              quantity: item.quantity,
+              price: item.product.price
+            })),
+            shipping: shippingDetails
+          },
+          p_items: itemsForStock
+        });
+
+        if (error) {
+          if (error.message.includes('Insufficient stock')) {
+            toast({
+              title: "Out of Stock",
+              description: "Some items in your cart are no longer available in the requested quantity. Please check your cart.",
+              variant: "destructive"
+            });
+            navigate("/cart");
+            return;
+          }
+          throw error;
+        }
+
+        console.log("Order processed via RPC successfully:", generatedOrderId);
+
+        // Try to trigger order confirmation email
+        try {
+          await supabase.functions.invoke("send-user-mail", {
+            body: {
+              email: user.email,
+              type: "order_confirmation",
+              name: user.name,
+              orderDetails: {
+                total: (totalPrice + (totalPrice * 0.05)).toFixed(2),
+                items: cartItems.map(i => `${i.product.name} (x${i.quantity})`).join(", ")
+              }
+            },
+          });
+        } catch (mailError) {
+          console.warn("Order mail trigger error:", mailError);
+        }
+
+        toast({
+          title: "Order Processed",
+          description: "Your order has been placed successfully!",
+        });
+
+        setTimeout(() => {
+          clearCart();
+          navigate("/payment-success", { state: { orderId: generatedOrderId } });
+        }, 1500);
+      } catch (error: any) {
+        console.error("Order processing error:", error);
+        toast({
+          title: "Order Failed",
+          description: error.message || "We couldn't process your order. Please try again.",
+          variant: "destructive"
+        });
+        return; // Don't redirect or clear cart on hard error
+      }
+    } else {
+      // For guest checkout (if applicable) or fallback
+      setTimeout(() => {
+        clearCart();
+        navigate("/payment-success");
+      }, 1500);
     }
-    
-    setTimeout(() => {
-      clearCart();
-      navigate("/payment-success");
-    }, 1000);
   };
 
   React.useEffect(() => {
@@ -187,7 +250,7 @@ export function PaymentForm() {
                       <FormItem>
                         <FormLabel>Name on Card</FormLabel>
                         <FormControl>
-                          <Input placeholder="John Doe" {...field} />
+                          <Input placeholder="RAHUL KHANNA" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -221,17 +284,17 @@ export function PaymentForm() {
                       )}
                     />
                   </div>
-                  
+
                   <div className="flex items-center mt-4 p-4 bg-muted/50 rounded-md">
                     <ShieldCheck className="text-primary mr-2" size={20} />
                     <p className="text-sm text-muted-foreground">
                       Your payment information is secure and encrypted
                     </p>
                   </div>
-                  
+
                   <div className="flex justify-between mt-6">
-                    <Button 
-                      type="button" 
+                    <Button
+                      type="button"
                       variant="outline"
                       onClick={() => navigate("/checkout")}
                     >
@@ -255,23 +318,23 @@ export function PaymentForm() {
                       <FormItem>
                         <FormLabel>UPI ID</FormLabel>
                         <FormControl>
-                          <Input placeholder="username@bank" {...field} />
+                          <Input placeholder="username@upi" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  
+
                   <div className="flex items-center mt-4 p-4 bg-muted/50 rounded-md">
                     <ShieldCheck className="text-primary mr-2" size={20} />
                     <p className="text-sm text-muted-foreground">
                       Your UPI transaction is secure and protected
                     </p>
                   </div>
-                  
+
                   <div className="flex justify-between mt-6">
-                    <Button 
-                      type="button" 
+                    <Button
+                      type="button"
                       variant="outline"
                       onClick={() => navigate("/checkout")}
                     >
@@ -295,13 +358,13 @@ export function PaymentForm() {
                       <FormItem>
                         <FormLabel>Full Name</FormLabel>
                         <FormControl>
-                          <Input placeholder="John Doe" {...field} />
+                          <Input placeholder="Rahul Khanna" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={codForm.control}
                     name="phone"
@@ -315,17 +378,17 @@ export function PaymentForm() {
                       </FormItem>
                     )}
                   />
-                  
+
                   <div className="flex items-center mt-4 p-4 bg-muted/50 rounded-md">
                     <Truck className="text-primary mr-2" size={20} />
                     <p className="text-sm text-muted-foreground">
                       Pay in cash at the time of delivery
                     </p>
                   </div>
-                  
+
                   <div className="flex justify-between mt-6">
-                    <Button 
-                      type="button" 
+                    <Button
+                      type="button"
                       variant="outline"
                       onClick={() => navigate("/checkout")}
                     >
@@ -350,51 +413,65 @@ export function PaymentForm() {
               {cartItems.map((item) => (
                 <div key={item.product.id} className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded overflow-hidden flex-shrink-0">
-                    <img 
-                      src={item.product.imageUrl} 
-                      alt={item.product.name} 
-                      className="w-full h-full object-cover" 
+                    <img
+                      src={item.product.imageUrl}
+                      alt={item.product.name}
+                      className="w-full h-full object-cover"
                     />
                   </div>
                   <div className="flex-grow">
                     <p className="font-medium text-sm">{item.product.name}</p>
                     <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
                   </div>
-                  <p className="font-medium">${(item.product.price * item.quantity).toFixed(2)}</p>
+                  <p className="font-medium flex items-center gap-1">
+                    <span>₹</span>
+                    {(item.product.price * item.quantity).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                  </p>
                 </div>
               ))}
             </div>
           )}
-          
+
           <Separator className="my-4" />
-          
+
           <div className="space-y-2">
             <div className="flex justify-between">
               <span>Subtotal</span>
-              <span>${totalPrice.toFixed(2)}</span>
+              <span className="flex items-center gap-1">
+                <span>₹</span>
+                {totalPrice.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+              </span>
             </div>
             <div className="flex justify-between">
               <span>Shipping</span>
-              <span>Free</span>
+              <span className="text-green-600 font-medium">Free</span>
             </div>
             <div className="flex justify-between">
-              <span>Tax</span>
-              <span>${(totalPrice * 0.08).toFixed(2)}</span>
+              <span>Tax (GST 5%)</span>
+              <span className="flex items-center gap-1">
+                <span>₹</span>
+                {(totalPrice * 0.05).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+              </span>
             </div>
             <Separator className="my-2" />
-            <div className="flex justify-between font-bold">
+            <div className="flex justify-between font-bold text-lg">
               <span>Total</span>
-              <span>${(totalPrice + (totalPrice * 0.08)).toFixed(2)}</span>
+              <span className="flex items-center gap-1 text-primary">
+                <span>₹</span>
+                {(totalPrice + (totalPrice * 0.05)).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+              </span>
             </div>
           </div>
         </Card>
 
-        <div className="mt-4 p-4 bg-muted/50 rounded-md">
+        <div className="mt-4 p-4 bg-muted/50 rounded-md border">
           <h3 className="font-medium mb-2">Need Help?</h3>
           <p className="text-sm text-muted-foreground mb-2">
             If you have any questions about your order, please contact our customer service.
           </p>
-          <p className="text-sm text-primary">support@modernboutique.com</p>
+          <a href="mailto:support@homemadedelights.com" className="text-sm text-primary hover:underline block font-medium">
+            support@homemadedelights.com
+          </a>
         </div>
       </div>
     </div>

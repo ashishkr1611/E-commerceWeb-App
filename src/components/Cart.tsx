@@ -9,7 +9,7 @@ import { ShoppingCart, ArrowRight, Trash } from "lucide-react";
 export function Cart() {
   const { cartItems, totalPrice, clearCart } = useCart();
   const navigate = useNavigate();
-  
+
   const handleCheckout = () => {
     navigate("/checkout");
   };
@@ -33,8 +33,8 @@ export function Cart() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Shopping Cart</h1>
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           size="sm"
           onClick={clearCart}
           className="text-destructive hover:text-destructive-foreground hover:bg-destructive flex items-center gap-1"
@@ -51,30 +51,34 @@ export function Cart() {
             <CartItem key={item.product.id} item={item} />
           ))}
         </div>
-        
+
         {/* Cart Summary */}
         <div className="p-6 bg-muted/50">
           <div className="flex justify-between mb-2">
             <span>Subtotal</span>
-            <span>${totalPrice.toFixed(2)}</span>
+            <span className="font-medium">₹{totalPrice.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
           </div>
-          <div className="flex justify-between mb-2 text-muted-foreground">
+          <div className="flex justify-between mb-2 font-medium">
             <span>Shipping</span>
-            <span>Calculated at checkout</span>
+            <span className="text-green-600">Free</span>
           </div>
-          <div className="flex justify-between mb-4 font-bold text-lg">
+          <div className="flex justify-between mb-2">
+            <span>Tax (GST 5%)</span>
+            <span className="font-medium">₹{(totalPrice * 0.05).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
+          </div>
+          <div className="flex justify-between mb-4 font-bold text-xl border-t pt-4">
             <span>Total</span>
-            <span>${totalPrice.toFixed(2)}</span>
+            <span className="text-primary font-bold">₹{(totalPrice * 1.05).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
           </div>
-          
-          <Button 
+
+          <Button
             className="w-full flex items-center justify-center gap-2"
             onClick={handleCheckout}
           >
             Proceed to Checkout
             <ArrowRight size={16} />
           </Button>
-          
+
           <div className="mt-4 text-center">
             <Link to="/products" className="text-sm text-primary hover:underline">
               ← Continue Shopping

@@ -1,7 +1,5 @@
-
-import React from "react";
-import { NavigationMenu } from "@/components/ui/NavigationMenu";
-import { 
+import React, { useState } from "react";
+import {
   Form,
   FormControl,
   FormField,
@@ -17,11 +15,11 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useUser } from "@/context/UserContext";
 import { Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
 import { LogIn, Loader2 } from "lucide-react";
+import { Layout } from "@/components/Layout";
 
 const formSchema = z.object({
-  username: z.string().min(3, "Username must be at least 3 characters"),
+  email: z.string().email("Please enter a valid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
@@ -29,19 +27,19 @@ const Login = () => {
   const { login } = useUser();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      username: "",
+      email: "",
       password: "",
     },
   });
-  
+
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
       setIsSubmitting(true);
-      await login(values.username, values.password);
+      await login(values.email, values.password);
       navigate("/profile");
     } catch (error) {
       console.error("Login error:", error);
@@ -51,31 +49,29 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <NavigationMenu />
-      
-      <main className="flex-grow container py-12">
+    <Layout>
+      <div className="container py-12">
         <div className="max-w-md mx-auto">
-          <Card>
-            <CardHeader className="space-y-1">
-              <CardTitle className="text-2xl font-bold flex items-center gap-2">
-                <LogIn size={20} /> Sign in to your account
+          <Card className="shadow-lg border-amber-100">
+            <CardHeader className="space-y-1 bg-amber-50/50 rounded-t-xl">
+              <CardTitle className="text-2xl font-bold flex items-center gap-2 text-amber-800">
+                <LogIn size={20} /> Sign in
               </CardTitle>
               <CardDescription>
-                Enter your username and password to sign in
+                Enter your email and password to access your account
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                   <FormField
                     control={form.control}
-                    name="username"
+                    name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Username</FormLabel>
+                        <FormLabel>Email</FormLabel>
                         <FormControl>
-                          <Input placeholder="johndoe" {...field} />
+                          <Input placeholder="Enter email" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -86,7 +82,15 @@ const Login = () => {
                     name="password"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Password</FormLabel>
+                        <div className="flex items-center justify-between">
+                          <FormLabel>Password</FormLabel>
+                          <Link
+                            to="/forgot-password"
+                            className="text-xs text-amber-600 hover:text-amber-700 font-medium"
+                          >
+                            Forgot password?
+                          </Link>
+                        </div>
                         <FormControl>
                           <Input type="password" placeholder="••••••••" {...field} />
                         </FormControl>
@@ -94,7 +98,7 @@ const Login = () => {
                       </FormItem>
                     )}
                   />
-                  <Button type="submit" className="w-full" disabled={isSubmitting}>
+                  <Button type="submit" className="w-full bg-amber-600 hover:bg-amber-700" disabled={isSubmitting}>
                     {isSubmitting ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -107,24 +111,18 @@ const Login = () => {
                 </form>
               </Form>
             </CardContent>
-            <CardFooter className="flex flex-col space-y-2">
+            <CardFooter className="flex flex-col space-y-2 border-t pt-4">
               <div className="text-sm text-center text-muted-foreground">
                 Don't have an account?{" "}
-                <Link to="/register" className="text-primary underline underline-offset-4 hover:text-primary/90">
+                <Link to="/register" className="text-amber-600 underline underline-offset-4 hover:text-amber-700 font-medium">
                   Create an account
                 </Link>
               </div>
             </CardFooter>
           </Card>
         </div>
-      </main>
-      
-      <footer className="bg-primary text-primary-foreground py-6 mt-auto">
-        <div className="container text-center">
-          <p>© {new Date().getFullYear()} Modern Boutique. All rights reserved.</p>
-        </div>
-      </footer>
-    </div>
+      </div>
+    </Layout>
   );
 };
 

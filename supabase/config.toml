@@ -1,5 +1,5 @@
 
-project_id = "jxxfsmjwqsuznfwbstnn"
+project_id = "cxfdexukpmnruleqxowa"
 
 [functions.send-user-mail]
 verify_jwt = false

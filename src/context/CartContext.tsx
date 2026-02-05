@@ -1,7 +1,7 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { Product, CartItem } from "@/lib/data";
 import { toast } from "@/components/ui/use-toast";
+import { useUser } from "@/context/UserContext";
 
 interface CartContextType {
   cartItems: CartItem[];
@@ -27,6 +27,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const [totalPrice, setTotalPrice] = useState(0);
+  const { isAdmin } = useUser();
 
   // Load cart from localStorage on component mount
   useEffect(() => {
@@ -47,12 +48,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     } else {
       localStorage.removeItem("cart");
     }
-    
+
     // Calculate totals
     setTotalItems(
       cartItems.reduce((total, item) => total + item.quantity, 0)
     );
-    
+
     setTotalPrice(
       cartItems.reduce(
         (total, item) => total + item.product.price * item.quantity,
@@ -69,10 +70,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       );
 
       if (existingItem) {
+        // Check if adding more would exceed stock
+        const newQuantity = existingItem.quantity + quantity;
+        if (newQuantity > product.stock) {
+          toast({
+            title: "Item Limit Reached",
+            description: isAdmin
+              ? `We only have ${product.stock} items in stock.`
+              : "We don't have enough items in stock for your request.",
+            variant: "destructive"
+          });
+          return prevItems;
+        }
+
         // Update quantity if product already in cart
         const updatedItems = prevItems.map((item) =>
           item.product.id === product.id
-            ? { ...item, quantity: item.quantity + quantity }
+            ? { ...item, quantity: newQuantity }
             : item
         );
         toast({
@@ -82,6 +96,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         });
         return updatedItems;
       } else {
+        // Check if initial quantity exceeds stock
+        if (quantity > product.stock) {
+          toast({
+            title: "Insufficient Stock",
+            description: isAdmin
+              ? `We only have ${product.stock} items in stock.`
+              : "Requested quantity exceeds available stock.",
+            variant: "destructive"
+          });
+          return prevItems;
+        }
+
         // Add new product to cart
         toast({
           title: "Added to cart",
@@ -116,11 +142,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
 
     setCartItems((prevItems) =>
-      prevItems.map((item) =>
-        item.product.id === productId
-          ? { ...item, quantity }
-          : item
-      )
+      prevItems.map((item) => {
+        if (item.product.id === productId) {
+          if (quantity > item.product.stock) {
+            toast({
+              title: "Stock limit",
+              description: isAdmin
+                ? `Only ${item.product.stock} available.`
+                : "Cannot increase quantity further.",
+              variant: "destructive"
+            });
+            return item;
+          }
+          return { ...item, quantity };
+        }
+        return item;
+      })
     );
   };
 

@@ -12,6 +12,7 @@ type User = {
   phone?: string;
   address?: string;
   city?: string; // Added city
+  state?: string; // Added state
   pinCode?: string;
   isVerified: boolean;
   role?: 'admin' | 'user';
@@ -48,6 +49,31 @@ const MOCK_USERS: (User & { password: string })[] = [
   }
 ];
 
+// Helper to manage persistent local data for fields missing in DB
+const EXTENDED_DATA_KEY = "shopify_simplified_users_extended";
+
+const getExtendedData = (userId: string) => {
+  try {
+    const raw = localStorage.getItem(EXTENDED_DATA_KEY);
+    const allData = raw ? JSON.parse(raw) : {};
+    return allData[userId] || {};
+  } catch (e) {
+    console.error("Error reading extended data", e);
+    return {};
+  }
+};
+
+const saveExtendedData = (userId: string, data: { city?: string; state?: string }) => {
+  try {
+    const raw = localStorage.getItem(EXTENDED_DATA_KEY);
+    const allData = raw ? JSON.parse(raw) : {};
+    allData[userId] = { ...allData[userId], ...data };
+    localStorage.setItem(EXTENDED_DATA_KEY, JSON.stringify(allData));
+  } catch (e) {
+    console.error("Error saving extended data", e);
+  }
+};
+
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -72,11 +98,17 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
             name: profile.full_name || "",
             phone: profile.phone || "",
             address: profile.address || "",
-            city: profile.city || "",
+            city: (profile as any).city || "",
+            state: (profile as any).state || "",
             pinCode: profile.pin_code || "",
             isVerified: profile.is_verified || !!session.user.email_confirmed_at,
             role: profile.role as 'admin' | 'user'
           };
+          // RESTORE LOCAL DATA (Persistent across logouts):
+          const extended = getExtendedData(session.user.id);
+          if (extended.city) userObj.city = extended.city;
+          if (extended.state) userObj.state = extended.state;
+
           setUser(userObj);
           localStorage.setItem("user", JSON.stringify(userObj));
         }
@@ -124,11 +156,18 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
             name: profile.full_name || "",
             phone: profile.phone || "",
             address: profile.address || "",
-            city: profile.city || "",
+            city: (profile as any).city || "",
+            state: (profile as any).state || "",
             pinCode: profile.pin_code || "",
             isVerified: profile.is_verified || !!data.user.email_confirmed_at,
             role: profile.role as 'admin' | 'user'
           };
+
+          // RESTORE LOCAL DATA (Persistent across logouts):
+          const extended = getExtendedData(data.user.id);
+          if (extended.city) userObj.city = extended.city;
+          if (extended.state) userObj.state = extended.state;
+
           setUser(userObj);
           localStorage.setItem("user", JSON.stringify(userObj));
           toast({
@@ -237,13 +276,21 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
             full_name: updatedUser.name,
             phone: updatedUser.phone,
             address: updatedUser.address,
-            city: updatedUser.city,
+            // city and state removed to avoid schema error
             pin_code: updatedUser.pinCode,
             username: updatedUser.username
           })
           .eq('id', user.id);
 
         if (error) throw error;
+
+        // Save extended data persistently
+        if (updatedUser.city || updatedUser.state) {
+          saveExtendedData(user.id, {
+            city: updatedUser.city,
+            state: updatedUser.state
+          });
+        }
 
         const newUser = { ...user, ...updatedUser };
         setUser(newUser);

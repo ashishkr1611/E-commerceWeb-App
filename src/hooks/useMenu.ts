@@ -26,7 +26,17 @@ export const useMenu = () => {
                 .order('sort_order', { ascending: true });
 
             if (error) throw error;
-            setMenuItems(data || []);
+
+            if (data && data.length > 0) {
+                setMenuItems(data);
+            } else {
+                // Fallback if DB is empty
+                setMenuItems([
+                    { id: '1', label: 'Home', path: '/', is_visible: true, sort_order: 10, requires_auth: false, requires_admin: false },
+                    { id: '2', label: 'Shop', path: '/products', is_visible: true, sort_order: 20, requires_auth: false, requires_admin: false },
+                    { id: '3', label: 'About', path: '/about', is_visible: true, sort_order: 30, requires_auth: false, requires_admin: false },
+                ]);
+            }
         } catch (error) {
             console.error('Error fetching menu items:', error);
             // Fallback to defaults if DB fails

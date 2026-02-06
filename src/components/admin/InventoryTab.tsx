@@ -183,8 +183,20 @@ export const InventoryTab = ({ onSwitchToAdd }: InventoryTabProps) => {
                                     {editingId === product.id ? (
                                         <Input
                                             type="number"
+                                            min={0}
                                             value={editFormData.stock}
-                                            onChange={(e) => setEditFormData({ ...editFormData, stock: e.target.value })}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                // Allow empty string for typing, otherwise enforce non-negative
+                                                if (val === "") {
+                                                    setEditFormData({ ...editFormData, stock: val });
+                                                } else {
+                                                    const num = parseInt(val);
+                                                    if (!isNaN(num)) {
+                                                        setEditFormData({ ...editFormData, stock: Math.max(0, num) });
+                                                    }
+                                                }
+                                            }}
                                             className="w-20 h-8"
                                         />
                                     ) : (

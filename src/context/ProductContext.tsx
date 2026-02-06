@@ -64,6 +64,44 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
                         };
                     });
                 setProducts(mappedProducts);
+
+                // Sync: Check if we have local products that aren't in Supabase
+                // and try to upload them (if RLS allows or we are admin)
+                const existingIds = new Set(data.map(p => p.id));
+                const missingProducts = initialProducts.filter(p => !existingIds.has(p.id));
+
+                if (missingProducts.length > 0) {
+                    console.log("Found missing products locally, attempting to sync to Supabase...", missingProducts);
+
+                    const productsToInsert = missingProducts.map(p => ({
+                        id: p.id,
+                        name: p.name,
+                        price: p.price,
+                        description: p.description,
+                        category: p.category,
+                        image_url: p.imageUrl,
+                        is_featured: p.featured,
+                        is_new: p.new,
+                        stock: p.stock,
+                        images: p.images || [],
+                        is_published: p.isPublished ?? true,
+                        is_deleted: false
+                    }));
+
+                    const { error: insertError } = await supabase
+                        .from('products')
+                        .insert(productsToInsert);
+
+                    if (insertError) {
+                        console.warn("Failed to sync new products to Supabase (likely permissions), merging locally for display.", insertError);
+                        // Merge locally so the user sees them
+                        setProducts(prev => [...prev, ...missingProducts]);
+                    } else {
+                        console.log("Successfully synced new products!");
+                        // Append locally to avoid another fetch
+                        setProducts(prev => [...prev, ...missingProducts]);
+                    }
+                }
             } else {
                 setProducts(initialProducts);
             }

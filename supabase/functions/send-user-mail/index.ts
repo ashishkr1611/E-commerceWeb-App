@@ -1,8 +1,15 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "npm:resend@2.0.0";
+import nodemailer from "npm:nodemailer@6.9.13";
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+const transporter = nodemailer.createTransport({
+  host: Deno.env.get("SMTP_HOST"),
+  port: parseInt(Deno.env.get("SMTP_PORT") || "587"),
+  secure: Deno.env.get("SMTP_PORT") === "465", // true for 465, false for other ports
+  auth: {
+    user: Deno.env.get("SMTP_USER"),
+    pass: Deno.env.get("SMTP_PASS"),
+  },
+});
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -53,9 +60,9 @@ serve(async (req: Request) => {
       });
     }
 
-    const emailResponse = await resend.emails.send({
-      from: "Homemade Delights <devilvikash94@gmail.com>",
-      to: [body.email],
+    const emailResponse = await transporter.sendMail({
+      from: `"Homemade Delights" <${Deno.env.get("SMTP_USER")}>`,
+      to: body.email,
       subject,
       html,
     });

@@ -35,9 +35,20 @@ const profileSchema = z.object({
   phone: z.string().min(10, "Phone number must be at least 10 digits"),
   address: z.string().min(5, "Address must be at least 5 characters"),
   city: z.string().optional(),
+  state: z.string().optional(),
   pinCode: z.string().min(5, "PIN code must be at least 5 characters"),
   email: z.string().email("Invalid email address"),
 });
+
+const indianStates = [
+  "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat",
+  "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh",
+  "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab",
+  "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh",
+  "Uttarakhand", "West Bengal", "Andaman and Nicobar Islands", "Chandigarh",
+  "Dadra and Nagar Haveli and Daman and Diu", "Delhi", "Jammu and Kashmir", "Ladakh",
+  "Lakshadweep", "Puducherry"
+];
 
 const Profile = () => {
   const { user, logout, updateProfile } = useUser();
@@ -51,6 +62,7 @@ const Profile = () => {
       phone: user?.phone || "",
       address: user?.address || "",
       city: (user as any)?.city || "",
+      state: user?.state || "",
       pinCode: user?.pinCode || "",
       email: user?.email || "",
     },
@@ -141,6 +153,13 @@ const Profile = () => {
                     <span className="font-medium text-muted-foreground">Member Since:</span>
                     <p className="font-medium">{new Date().toLocaleDateString()}</p>
                   </div>
+                  <div className="text-sm">
+                    <span className="font-medium text-muted-foreground">Location:</span>
+                    <p className="font-medium">
+                      {user?.city ? `${user.city}, ` : ""}
+                      {user?.state || ""}
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -218,19 +237,45 @@ const Profile = () => {
                               </FormItem>
                             )}
                           />
-                          <FormField
-                            control={form.control}
-                            name="city"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>City</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="Mumbai" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                              control={form.control}
+                              name="city"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>City</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="Mumbai" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="state"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>State</FormLabel>
+                                  <FormControl>
+                                    <select
+                                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                      {...field}
+                                    >
+                                      <option value="">Select State</option>
+                                      {indianStates.map((state) => (
+                                        <option key={state} value={state}>
+                                          {state}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
 
                           <FormField
                             control={form.control}

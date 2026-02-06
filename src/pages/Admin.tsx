@@ -6,17 +6,14 @@ import {
     Package,
     ShoppingCart,
     Users,
-    FileBarChart,
     PlusCircle,
-    Tag,
-    Menu as MenuIcon
+    Tag
 } from "lucide-react";
 
 // Modular Components
 import { InventoryTab } from "@/components/admin/InventoryTab";
 import { AddProductTab } from "@/components/admin/AddProductTab";
 import { OrdersTab } from "@/components/admin/OrdersTab";
-import { MenuTab } from "@/components/admin/MenuTab";
 import { ReportsTab } from "@/components/admin/ReportsTab";
 import { UsersTab } from "@/components/admin/UsersTab";
 import { CategoryManagementTab } from "@/components/admin/CategoryManagementTab";
@@ -59,12 +56,7 @@ const Admin = () => {
                             >
                                 <ShoppingCart className="mr-2 h-4 w-4" /> Orders
                             </TabsTrigger>
-                            <TabsTrigger
-                                value="menu"
-                                className="data-[state=active]:bg-white data-[state=active]:text-amber-900 data-[state=active]:shadow-sm px-4 py-2"
-                            >
-                                <MenuIcon className="mr-2 h-4 w-4" /> Menu
-                            </TabsTrigger>
+
                             <TabsTrigger
                                 value="users"
                                 className="data-[state=active]:bg-white data-[state=active]:text-amber-900 data-[state=active]:shadow-sm px-4 py-2"
@@ -77,12 +69,7 @@ const Admin = () => {
                             >
                                 <Tag className="mr-2 h-4 w-4" /> Categories
                             </TabsTrigger>
-                            <TabsTrigger
-                                value="analytics"
-                                className="data-[state=active]:bg-white data-[state=active]:text-amber-900 data-[state=active]:shadow-sm px-4 py-2"
-                            >
-                                <FileBarChart className="mr-2 h-4 w-4" /> Analytics
-                            </TabsTrigger>
+
                         </TabsList>
                     </div>
 
@@ -101,9 +88,7 @@ const Admin = () => {
                     <TabsContent value="orders">
                         <OrdersTab />
                     </TabsContent>
-                    <TabsContent value="menu">
-                        <MenuTab />
-                    </TabsContent>
+
                     <TabsContent value="users">
                         <UsersTab />
                     </TabsContent>
@@ -112,9 +97,7 @@ const Admin = () => {
                         <CategoryManagementTab />
                     </TabsContent>
 
-                    <TabsContent value="analytics">
-                        <ReportsTab />
-                    </TabsContent>
+
                 </Tabs>
             </div>
         </Layout>
